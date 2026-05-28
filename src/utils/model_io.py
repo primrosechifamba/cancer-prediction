@@ -61,3 +61,17 @@ def load_keras_model(model_path):
         repaired_path = _write_lambda_shape_repaired_copy(model_path)
         model = tf.keras.models.load_model(repaired_path, safe_mode=False)
         return _inject_tensorflow_into_lambda_layers(model)
+    except TypeError as exc:
+        # Keras may fail to resolve custom objects (e.g. 'swish' activation or
+        # references inside Lambda layers). Retry loading with a conservative
+        # set of common custom objects and inject `tf` into lambda globals.
+        try:
+            custom_objects = {
+                "swish": tf.keras.activations.swish,
+                "tf": tf,
+            }
+            model = tf.keras.models.load_model(model_path, safe_mode=False, custom_objects=custom_objects)
+            return _inject_tensorflow_into_lambda_layers(model)
+        except Exception:
+            # Re-raise the original TypeError for visibility if fallback fails
+            raise
