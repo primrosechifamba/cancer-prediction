@@ -39,10 +39,10 @@ images/
 # =========================
 # Model artifacts
 # =========================
-models/
+
 experiments/
 
-*.keras
+
 *.h5
 *.hdf5
 *.ckpt

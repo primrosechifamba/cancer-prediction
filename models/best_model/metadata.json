@@ -1,0 +1,22 @@
+{
+    "model": "resnet50",
+    "resolution": "224",
+    "run": "1",
+    "accuracy": 0.599523241954708,
+    "balanced_accuracy": 0.6882187352002851,
+    "precision_macro": 0.5631157409773792,
+    "precision_weighted": 0.6461411117159078,
+    "recall_macro": 0.6882187352002851,
+    "recall_weighted": 0.599523241954708,
+    "f1_macro": 0.5947404571646185,
+    "f1_weighted": 0.6090123633621152,
+    "precision": 0.6461411117159078,
+    "recall": 0.599523241954708,
+    "f1_score": 0.6090123633621152,
+    "top_2_accuracy": 0.8009535160905841,
+    "top_3_accuracy": 0.8915375446960667,
+    "log_loss": 1.1190549005518238,
+    "roc_auc_macro": 0.8990813318113025,
+    "roc_auc_weighted": 0.8609954812328386,
+    "roc_auc": 0.8609954812328386
+}
