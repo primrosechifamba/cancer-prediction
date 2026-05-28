@@ -652,7 +652,7 @@ with upload_col:
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(image, caption=uploaded_file.name, use_container_width=True)
+        st.image(image, caption=uploaded_file.name, width="stretch")
         st.caption(f"Image size: {image.size[0]} x {image.size[1]} px")
     else:
         image = None
@@ -726,13 +726,13 @@ with result_col:
             render_probability_bars(probability_df)
             st.dataframe(
                 probability_df.assign(Probability=lambda df: (df["Probability"] * 100).round(2)),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
 
         with tab_models:
             if not model_outputs.empty:
-                st.dataframe(model_outputs, use_container_width=True, hide_index=True)
+                st.dataframe(model_outputs, width="stretch", hide_index=True)
             else:
                 st.info("Single-model mode is active.")
 
