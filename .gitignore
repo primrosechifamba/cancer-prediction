@@ -1,31 +1,47 @@
-# Python cache and local environments
+# =========================
+# Python cache & environments
+# =========================
 __pycache__/
 *.py[cod]
 *.pyo
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
 .venv/
 venv/
 env/
 Envs/
 
-# IDE and notebook checkpoints
+# =========================
+# IDE files
+# =========================
 .idea/
 .vscode/
+
+# =========================
+# Jupyter
+# =========================
 .ipynb_checkpoints/
 notebooks/.ipynb_checkpoints/
 
+# =========================
 # Large datasets
+# =========================
 data/raw/
 data/processed/
 data/augmented/
 data/splits/
+
+# Optional image dataset exclusion
 images/
 
-# Trained model artifacts and experiment checkpoints
+# =========================
+# Model artifacts
+# =========================
 models/
 experiments/
+
 *.keras
 *.h5
 *.hdf5
@@ -33,13 +49,22 @@ experiments/
 *.pkl
 *.joblib
 
-# Generated results and plots
-
+# =========================
+# Logs
+# =========================
 training_full_log.txt
 *.log
 
-# Local temporary files
-cls
-python
+# =========================
+# OS files
+# =========================
 .DS_Store
 Thumbs.db
+
+# =========================
+# IMPORTANT
+# Do NOT ignore deployment
+# =========================
+!deployment/
+!deployment/app.py
+!deployment/requirements.txt
