@@ -24,6 +24,9 @@ class ResNet50Preprocessing(tf.keras.layers.Layer):
     def call(self, inputs):
         return tf.keras.applications.resnet50.preprocess_input(inputs * 255.0)
 
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
     def get_config(self):
         return super().get_config()
 
@@ -42,6 +45,9 @@ class MobileNetV2Preprocessing(tf.keras.layers.Layer):
 
     def call(self, inputs):
         return tf.keras.applications.mobilenet_v2.preprocess_input(inputs * 255.0)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
     def get_config(self):
         return super().get_config()
@@ -78,7 +84,7 @@ def _repair_layer_config(layer):
         dtype = dtype.name
 
     if layer.get("name") == "resnet50_preprocessing" or layer_config.get("name") == "resnet50_preprocessing":
-        layer["module"] = "src.utils.model_io"
+        layer["module"] = None
         layer["class_name"] = "ResNet50Preprocessing"
         layer["registered_name"] = "CancerPrediction>ResNet50Preprocessing"
         layer["config"] = {
@@ -89,7 +95,7 @@ def _repair_layer_config(layer):
         return True
 
     if layer.get("name") == "mobilenetv2_preprocessing" or layer_config.get("name") == "mobilenetv2_preprocessing":
-        layer["module"] = "src.utils.model_io"
+        layer["module"] = None
         layer["class_name"] = "MobileNetV2Preprocessing"
         layer["registered_name"] = "CancerPrediction>MobileNetV2Preprocessing"
         layer["config"] = {
@@ -139,12 +145,15 @@ def load_keras_model(model_path):
         "tf": tf,
         "ResNet50Preprocessing": ResNet50Preprocessing,
         "CancerPrediction>ResNet50Preprocessing": ResNet50Preprocessing,
+        "src.utils.model_io.ResNet50Preprocessing": ResNet50Preprocessing,
         "MobileNetV2Preprocessing": MobileNetV2Preprocessing,
         "CancerPrediction>MobileNetV2Preprocessing": MobileNetV2Preprocessing,
+        "src.utils.model_io.MobileNetV2Preprocessing": MobileNetV2Preprocessing,
     }
 
     try:
-        model = tf.keras.models.load_model(model_path, safe_mode=False, custom_objects=custom_objects)
+        with tf.keras.utils.custom_object_scope(custom_objects):
+            model = tf.keras.models.load_model(model_path, safe_mode=False, custom_objects=custom_objects)
         return _inject_tensorflow_into_lambda_layers(model)
     except (NotImplementedError, TypeError, ValueError) as exc:
         error_text = str(exc)
@@ -157,5 +166,6 @@ def load_keras_model(model_path):
             raise
 
         repaired_path = _write_portable_repaired_copy(model_path)
-        model = tf.keras.models.load_model(repaired_path, safe_mode=False, custom_objects=custom_objects)
+        with tf.keras.utils.custom_object_scope(custom_objects):
+            model = tf.keras.models.load_model(repaired_path, safe_mode=False, custom_objects=custom_objects)
         return _inject_tensorflow_into_lambda_layers(model)

@@ -696,10 +696,10 @@ with result_col:
     else:
         try:
             prediction, model_outputs = run_prediction(image, metadata, default_model_rows, use_ensemble, use_tta)
-        except Exception as exc:
-            LOGGER.warning("Prediction failed with %s", exc.__class__.__name__)
+        except Exception:
+            LOGGER.exception("Prediction failed")
             st.error("Prediction is temporarily unavailable because the model could not be loaded.")
-            st.info("Please redeploy the app after updating the model loader, then try the image again.")
+            st.info("Please redeploy the app after updating the model loader, then try the image again. Detailed diagnostics are available in the app logs.")
             st.stop()
 
         predicted_index = int(np.argmax(prediction))
