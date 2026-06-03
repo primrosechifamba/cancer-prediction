@@ -172,9 +172,15 @@ def load_keras_model(model_path):
         "src.utils.model_io.MobileNetV2Preprocessing": MobileNetV2Preprocessing,
     }
 
+    load_path = model_path
+    try:
+        load_path = _write_portable_repaired_copy(model_path)
+    except (OSError, RuntimeError, ValueError, zipfile.BadZipFile):
+        load_path = model_path
+
     try:
         with tf.keras.utils.custom_object_scope(custom_objects):
-            model = tf.keras.models.load_model(model_path, safe_mode=False, custom_objects=custom_objects)
+            model = tf.keras.models.load_model(load_path, safe_mode=False, custom_objects=custom_objects)
         return _inject_tensorflow_into_lambda_layers(model)
     except (NotImplementedError, TypeError, ValueError) as exc:
         error_text = str(exc)
