@@ -75,9 +75,16 @@ def _inject_tensorflow_into_lambda_layers(model):
 
 def _repair_layer_config(layer):
     layer_config = layer.get("config", {})
+    changed = False
+
+    if layer.get("class_name") == "BatchNormalization":
+        for key in ("renorm", "renorm_clipping", "renorm_momentum"):
+            if key in layer_config:
+                layer_config.pop(key, None)
+                changed = True
 
     if layer.get("class_name") != "Lambda":
-        return False
+        return changed
 
     dtype = _deserialize_dtype(layer_config.get("dtype", "float32"))
     if hasattr(dtype, "name"):
@@ -109,7 +116,24 @@ def _repair_layer_config(layer):
         layer_config["output_shape"] = [None, None, 3]
         return True
 
-    return False
+    return changed
+
+
+def _repair_config_tree(value):
+    changed = False
+
+    if isinstance(value, dict):
+        if "class_name" in value and "config" in value:
+            changed = _repair_layer_config(value) or changed
+
+        for child in value.values():
+            changed = _repair_config_tree(child) or changed
+
+    elif isinstance(value, list):
+        for child in value:
+            changed = _repair_config_tree(child) or changed
+
+    return changed
 
 
 def _write_portable_repaired_copy(model_path):
@@ -126,10 +150,7 @@ def _write_portable_repaired_copy(model_path):
 
             if item.filename == "config.json":
                 config = json.loads(data)
-                changed = False
-
-                for layer in config.get("config", {}).get("layers", []):
-                    changed = _repair_layer_config(layer) or changed
+                changed = _repair_config_tree(config)
 
                 if changed:
                     data = json.dumps(config).encode("utf-8")
@@ -162,6 +183,8 @@ def load_keras_model(model_path):
             and "output_shape" not in error_text
             and "marshal" not in error_text
             and "bad marshal data" not in error_text
+            and "BatchNormalization" not in error_text
+            and "renorm" not in error_text
         ):
             raise
 
