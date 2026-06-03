@@ -1,5 +1,6 @@
 import html
 import json
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +11,8 @@ from PIL import Image
 from model_loader import load_prediction_model
 from preprocess import preprocess_image
 
+
+LOGGER = logging.getLogger(__name__)
 
 CLASS_NAMES = ["A", "AGC", "ASC-H", "ASC-US", "HSIL", "LSIL", "NILM", "SC"]
 CLASS_DESCRIPTIONS = {
@@ -135,6 +138,18 @@ def predict_with_ensemble(image, model_rows, use_tta=True):
         )
 
     return weighted_prediction / total_weight, pd.DataFrame(model_outputs)
+
+
+def run_prediction(image, metadata, default_model_rows, use_ensemble, use_tta):
+    if use_ensemble and not default_model_rows.empty:
+        prediction_vector, model_outputs = predict_with_ensemble(image, default_model_rows, use_tta)
+        return np.expand_dims(prediction_vector, axis=0), model_outputs
+
+    model = get_legacy_best_model()
+    image_size = int(metadata.get("resolution", IMAGE_SIZE)) if metadata else IMAGE_SIZE
+    batch = preprocess_variants(image, image_size, use_tta)
+    prediction = np.expand_dims(model.predict(batch, verbose=0).mean(axis=0), axis=0)
+    return prediction, pd.DataFrame()
 
 
 def inject_styles():
@@ -679,15 +694,13 @@ with result_col:
             unsafe_allow_html=True,
         )
     else:
-        if use_ensemble and not default_model_rows.empty:
-            prediction_vector, model_outputs = predict_with_ensemble(image, default_model_rows, use_tta)
-            prediction = np.expand_dims(prediction_vector, axis=0)
-        else:
-            model = get_legacy_best_model()
-            image_size = int(metadata.get("resolution", IMAGE_SIZE)) if metadata else IMAGE_SIZE
-            batch = preprocess_variants(image, image_size, use_tta)
-            prediction = np.expand_dims(model.predict(batch, verbose=0).mean(axis=0), axis=0)
-            model_outputs = pd.DataFrame()
+        try:
+            prediction, model_outputs = run_prediction(image, metadata, default_model_rows, use_ensemble, use_tta)
+        except Exception as exc:
+            LOGGER.warning("Prediction failed with %s", exc.__class__.__name__)
+            st.error("Prediction is temporarily unavailable because the model could not be loaded.")
+            st.info("Please redeploy the app after updating the model loader, then try the image again.")
+            st.stop()
 
         predicted_index = int(np.argmax(prediction))
         predicted_class = CLASS_NAMES[predicted_index]
