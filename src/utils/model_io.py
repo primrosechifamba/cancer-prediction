@@ -21,7 +21,7 @@ class ResNet50Preprocessing(tf.keras.layers.Layer):
         kwargs["dtype"] = _deserialize_dtype(kwargs.get("dtype"))
         super().__init__(**kwargs)
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         return tf.keras.applications.resnet50.preprocess_input(inputs * 255.0)
 
     def compute_output_shape(self, input_shape):
@@ -43,7 +43,7 @@ class MobileNetV2Preprocessing(tf.keras.layers.Layer):
         kwargs["dtype"] = _deserialize_dtype(kwargs.get("dtype"))
         super().__init__(**kwargs)
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         return tf.keras.applications.mobilenet_v2.preprocess_input(inputs * 255.0)
 
     def compute_output_shape(self, input_shape):
@@ -76,6 +76,14 @@ def _inject_tensorflow_into_lambda_layers(model):
 def _repair_layer_config(layer):
     layer_config = layer.get("config", {})
     changed = False
+
+    if "quantization_config" in layer_config:
+        layer_config.pop("quantization_config", None)
+        changed = True
+
+    if layer.get("class_name") == "InputLayer" and "optional" in layer_config:
+        layer_config.pop("optional", None)
+        changed = True
 
     if layer.get("class_name") == "Functional":
         for key in ("input_layers", "output_layers"):
@@ -197,7 +205,12 @@ def load_keras_model(model_path):
 
     try:
         with tf.keras.utils.custom_object_scope(custom_objects):
-            model = tf.keras.models.load_model(load_path, safe_mode=False, custom_objects=custom_objects)
+            model = tf.keras.models.load_model(
+                load_path,
+                safe_mode=False,
+                custom_objects=custom_objects,
+                compile=False,
+            )
         return _inject_tensorflow_into_lambda_layers(model)
     except (NotImplementedError, TypeError, ValueError) as exc:
         error_text = str(exc)
@@ -208,10 +221,18 @@ def load_keras_model(model_path):
             and "bad marshal data" not in error_text
             and "BatchNormalization" not in error_text
             and "renorm" not in error_text
+            and "quantization_config" not in error_text
+            and "InputLayer" not in error_text
+            and "optional" not in error_text
         ):
             raise
 
         repaired_path = _write_portable_repaired_copy(model_path)
         with tf.keras.utils.custom_object_scope(custom_objects):
-            model = tf.keras.models.load_model(repaired_path, safe_mode=False, custom_objects=custom_objects)
+            model = tf.keras.models.load_model(
+                repaired_path,
+                safe_mode=False,
+                custom_objects=custom_objects,
+                compile=False,
+            )
         return _inject_tensorflow_into_lambda_layers(model)

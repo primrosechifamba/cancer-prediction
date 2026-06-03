@@ -1,6 +1,6 @@
 streamlit
-tensorflow==2.16.1
-keras==3.3.3
+tensorflow==2.21.0
+keras==3.14.1
 numpy
 pandas
 pillow
