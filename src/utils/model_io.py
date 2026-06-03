@@ -77,6 +77,13 @@ def _repair_layer_config(layer):
     layer_config = layer.get("config", {})
     changed = False
 
+    if layer.get("class_name") == "Functional":
+        for key in ("input_layers", "output_layers"):
+            endpoint = layer_config.get(key)
+            if _is_flat_keras_endpoint(endpoint):
+                layer_config[key] = [endpoint]
+                changed = True
+
     if layer.get("class_name") == "BatchNormalization":
         for key in ("renorm", "renorm_clipping", "renorm_momentum"):
             if key in layer_config:
@@ -117,6 +124,16 @@ def _repair_layer_config(layer):
         return True
 
     return changed
+
+
+def _is_flat_keras_endpoint(endpoint):
+    return (
+        isinstance(endpoint, list)
+        and len(endpoint) == 3
+        and isinstance(endpoint[0], str)
+        and isinstance(endpoint[1], int)
+        and isinstance(endpoint[2], int)
+    )
 
 
 def _repair_config_tree(value):
